@@ -20,7 +20,7 @@ func main() {
 		log.Println(r.Host, r.RequestURI, "start")
 		url, err := url.Parse(fmt.Sprintf("https://%s", r.Host))
 		if err != nil {
-			log.Fatalln(r.Host, r.RequestURI, err)
+			log.Println(r.Host, r.RequestURI, err)
 		}
 		proxy := httputil.NewSingleHostReverseProxy(url)
 		proxy.Transport = &http.Transport{
@@ -36,7 +36,7 @@ func main() {
 			},
 		}
 		proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-			log.Fatalln(r.Host, r.RequestURI, err)
+			log.Println(r.Host, r.RequestURI, err)
 		}
 		proxy.ServeHTTP(w, r)
 	})
