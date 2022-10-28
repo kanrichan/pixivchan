@@ -11,16 +11,6 @@ import (
 	"time"
 )
 
-// DNS 缓存
-var DnsCache = sync.Map{}
-
-// Doh 列表
-var DohList = []string{
-	"https://dns.artikel10.org/dns-query",
-	"https://dns.digitalsize.net/dns-query",
-	"https://dns1.dnscrypt.ca:453/dns-query",
-}
-
 // Doh 找不到对应的主机记录
 var DohNotFoundErr = errors.New("Doh cannot find matching record")
 
@@ -82,7 +72,8 @@ func lookup(dohs []string, cache sync.Map, host string) (net.Conn, error) {
 		}
 		for _, answer := range data.Answer {
 			if answer.Data == "" || answer.Data == "127.0.0.1" ||
-				len(answer.Data) < 7 || len(answer.Data) > 15 {
+				len(answer.Data) < 7 || len(answer.Data) > 15 ||
+				strings.Contains(answer.Name, "cdn") {
 				continue
 			}
 			conn, err := net.Dial("tcp", answer.Data+":443")
@@ -95,6 +86,10 @@ func lookup(dohs []string, cache sync.Map, host string) (net.Conn, error) {
 			})
 			return conn, nil
 		}
+	}
+	// 可能被套上了CDN，因此尝试找上级域名的IP试试
+	if n := strings.Split(host, "."); len(n) >= 3 {
+		return lookup(dohs, cache, strings.Join(n[1:], "."))
 	}
 	return nil, DohNotFoundErr
 }

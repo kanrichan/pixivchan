@@ -10,31 +10,57 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"sync"
 )
 
-var FakeListener = &Listener{make(chan net.Conn, 100)}
+var (
+	// 代理监听主机
+	ProxyHost = "127.0.0.1"
+	// 代理监听端口
+	ProxyPort = 8080
+	// 需要反代的网址
+	SiteList = []string{"pixiv.net", "*.pixiv.net", "*.secure.pixiv.net", "*.pximg.net", "*.pixiv.org",
+		"github.com", "*.github.com", "*.githubusercontent.com", "*.githubassets.com"}
+	// DOH 列表
+	DohList = []string{
+		"https://dns.artikel10.org/dns-query",
+		"https://dns.digitalsize.net/dns-query",
+		"https://dns1.dnscrypt.ca:453/dns-query",
+	}
 
+	// 正代与反代间通信不需要占用端口
+	FakeListener = &Listener{make(chan net.Conn, 100)}
+	// DNS 缓存
+	DnsCache = sync.Map{}
+)
+
+func init() {
+	gencert("./", SiteList)
+	genpac("./", PacParam{SiteList, ProxyHost, ProxyPort})
+}
+
+// A Listener is a generic network listener for stream-oriented protocols.
+// Multiple goroutines may invoke methods on a Listener simultaneously.
 type Listener struct {
 	channel chan net.Conn
 }
 
+// Accept waits for and returns the next connection to the listener.
 func (ln *Listener) Accept() (net.Conn, error) {
 	conn := <-ln.channel
 	return conn, nil
 }
 
+// Close closes the listener.
+// Any blocked Accept operations will be unblocked and return errors.
 func (ln *Listener) Close() error {
 	close(ln.channel)
 	return nil
 }
 
+// Addr returns the listener's network address.
 func (ln *Listener) Addr() net.Addr {
 	return &net.IPAddr{IP: net.IPv4(127, 0, 0, 1)}
-}
-
-func init() {
-	DnsCache.Store("accounts.pixiv.net", "210.140.92.187")
-	DnsCache.Store("pixiv.net", "210.140.92.187")
 }
 
 func main() {
@@ -71,14 +97,14 @@ func main() {
 	}()
 
 	// 正向代理，使流量走到反向代理
-	ln, err := net.Listen("tcp", "127.0.0.1:8080")
+	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", ProxyHost, ProxyPort))
 	if err != nil {
 		log.Panicln(err)
 	}
 	for {
 		browser, err := ln.Accept()
 		if err != nil {
-			log.Panic(err)
+			log.Panicln(err)
 		}
 		go func(browser net.Conn) {
 			defer browser.Close()
@@ -99,14 +125,12 @@ func main() {
 				address = uri.Scheme + ":" + uri.Opaque
 			} else { // HTTP
 				address = uri.Host
-				if strings.Contains(uri.Host, ":") {
+				if !strings.Contains(uri.Host, ":") {
 					address = uri.Host + ":80"
 				}
 			}
 			var server net.Conn
-			if strings.Contains(uri.String(), "pixiv") ||
-				strings.Contains(uri.String(), "pximg") ||
-				strings.Contains(uri.String(), "github") {
+			if inpac(SiteList, uri.Scheme) {
 				var reverse net.Conn
 				server, reverse = net.Pipe()
 				FakeListener.channel <- reverse

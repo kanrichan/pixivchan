@@ -14,42 +14,37 @@ import (
 	"time"
 )
 
-// 需要反代的站点及 DNS Name
-var DnsList = []string{"pixiv.net", "*.pixiv.net", "*.secure.pixiv.net", "pximg.net", "*.pximg.net", "pixiv.org", "*.pixiv.org",
-	"github.com", "*.github.com", "githubusercontent.com", "*.githubusercontent.com", "githubassets.com", "*.githubassets.com"}
-
-// 加载证书
-func init() {
-	var dir = "./"
-	// 加载或生成 CA 证书
+// 生成证书
+func gencert(dir string, list []string) error {
+	// 生成 CA 证书
 	if _, err := os.Stat(path.Join(dir, "ca.cer")); os.IsNotExist(err) {
 		if err := signCA(dir); err != nil {
-			panic(err)
+			return err
 		}
 	}
 	_, b1, err := loadpem(path.Join(dir, "ca.cer"))
 	if err != nil {
-		panic(err)
+		return err
 	}
 	cacert, err := x509.ParseCertificate(b1)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	_, b2, err := loadpem(path.Join(dir, "ca.key"))
 	if err != nil {
-		panic(err)
+		return err
 	}
 	cakey, err := x509.ParseECPrivateKey(b2)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	// 加载或生成反代站点证书
+	// 生成反代站点证书
 	if _, err := os.Stat(path.Join(dir, "pixivchan.cer")); os.IsNotExist(err) {
-		err := signCert(dir, "pixivchan", DnsList, cacert, cakey)
-		if err != nil {
-			panic(err)
+		if err := signCert(dir, "pixivchan", list, cacert, cakey); err != nil {
+			return err
 		}
 	}
+	return nil
 }
 
 func savepem(name, typ string, data []byte) error {
@@ -85,7 +80,7 @@ func signCA(dir string) error {
 		return err
 	}
 	template := x509.Certificate{
-		SerialNumber:          big.NewInt(1145141919810),
+		SerialNumber:          big.NewInt(time.Now().Unix()),
 		Issuer:                pkix.Name{},
 		Subject:               pkix.Name{Organization: []string{"FloatTech"}, CommonName: "PixivChan CA"},
 		NotBefore:             time.Now(),
@@ -118,7 +113,7 @@ func signCert(dir string, name string, dns []string, cacert *x509.Certificate, c
 		return err
 	}
 	template := x509.Certificate{
-		SerialNumber: big.NewInt(1),
+		SerialNumber: big.NewInt(time.Now().Unix()),
 		Subject:      pkix.Name{Organization: []string{"FloatTech"}, CommonName: name},
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().Add(time.Hour * 24 * 365),
