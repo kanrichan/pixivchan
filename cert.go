@@ -85,14 +85,15 @@ func signCA(dir string) error {
 		return err
 	}
 	template := x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Issuer:       pkix.Name{},
-		Subject:      pkix.Name{Organization: []string{"FloatTech"}, CommonName: "PixivChan CA"},
-		NotBefore:    time.Now(),
-		NotAfter:     time.Now().Add(time.Hour * 24 * 365),
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		IsCA:         true,
+		SerialNumber:          big.NewInt(1145141919810),
+		Issuer:                pkix.Name{},
+		Subject:               pkix.Name{Organization: []string{"FloatTech"}, CommonName: "PixivChan CA"},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Hour * 24 * 365),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		IsCA:                  true,
+		BasicConstraintsValid: true,
 	}
 	certificate, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
 	if err != nil {
