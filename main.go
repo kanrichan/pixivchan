@@ -36,7 +36,6 @@ var (
 
 func init() {
 	gencert("./", SiteList)
-	genpac("./", PacParam{SiteList, ProxyHost, ProxyPort})
 }
 
 // A Listener is a generic network listener for stream-oriented protocols.
@@ -116,6 +115,18 @@ func main() {
 			}
 			var method, host, address string
 			fmt.Sscanf(string(b[:n]), "%s%s", &method, &host)
+			// PAC 代理设置
+			if method == "GET" && host == "/pixivchan.pac" {
+				browser.Write([]byte("HTTP/1.1 200 OK\r\n"))
+				browser.Write([]byte("Content-Type: application/javascript; charset=UTF-8\r\n"))
+				browser.Write([]byte("\r\n"))
+				err = pac(browser, PacParam{SiteList, ProxyHost, ProxyPort})
+				if err != nil {
+					log.Println(err)
+					return
+				}
+				return
+			}
 			uri, err := url.Parse(host)
 			if err != nil {
 				elem := strings.Split(host, ":")

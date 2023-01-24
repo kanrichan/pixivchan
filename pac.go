@@ -2,8 +2,7 @@ package main
 
 import (
 	"html/template"
-	"os"
-	"path"
+	"io"
 	"strings"
 )
 
@@ -24,17 +23,12 @@ var PacTemplate = `function FindProxyForURL(url, host) {
   return "DIRECT"; 
 }`
 
-func genpac(dir string, param PacParam) error {
+func pac(wr io.Writer, param PacParam) error {
 	pac, err := template.New("").Parse(PacTemplate)
 	if err != nil {
 		return err
 	}
-	fi, err := os.OpenFile(path.Join(dir, "pixivchan.pac"), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer fi.Close()
-	err = pac.Execute(fi, param)
+	err = pac.Execute(wr, param)
 	if err != nil {
 		return err
 	}
