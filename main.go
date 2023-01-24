@@ -24,14 +24,14 @@ var (
 	// DOH 列表
 	DohList = []string{
 		"https://dns.artikel10.org/dns-query",
-		"https://dns.digitalsize.net/dns-query",
 		"https://dns1.dnscrypt.ca:453/dns-query",
+		"https://dns.digitalsize.net/dns-query",
 	}
 
 	// 正代与反代间通信不需要占用端口
 	FakeListener = &Listener{make(chan net.Conn, 100)}
 	// DNS 缓存
-	DnsCache = sync.Map{}
+	DnsCache = &sync.Map{}
 )
 
 func init() {

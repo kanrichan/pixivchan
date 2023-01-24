@@ -55,7 +55,7 @@ func doh(query string, host string) (*DohData, error) {
 	return &data, nil
 }
 
-func lookup(dohs []string, cache sync.Map, host string) (net.Conn, error) {
+func lookup(dohs []string, cache *sync.Map, host string) (net.Conn, error) {
 	// 读取 DNS 缓存
 	host = strings.TrimPrefix(host, "www.")
 	if ip, ok := cache.Load(host); ok {
