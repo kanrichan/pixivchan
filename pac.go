@@ -53,8 +53,8 @@ OUT:
 			if n1[j] != n2[j] && n2[j] != "*" {
 				continue OUT
 			}
-			return true
 		}
+		return true
 	}
 	return false
 }

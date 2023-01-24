@@ -118,8 +118,17 @@ func main() {
 			fmt.Sscanf(string(b[:n]), "%s%s", &method, &host)
 			uri, err := url.Parse(host)
 			if err != nil {
-				log.Println(err)
-				return
+				elem := strings.Split(host, ":")
+				if len(elem) < 2 {
+					log.Println(err)
+					return
+				}
+				ip := net.ParseIP(strings.Join(elem[:len(elem)-1], ":"))
+				if ip == nil {
+					log.Println(err)
+					return
+				}
+				uri = &url.URL{Host: ip.String(), Scheme: ip.String(), Opaque: elem[len(elem)-1]}
 			}
 			if method == "CONNECT" { // HTTPS
 				address = uri.Scheme + ":" + uri.Opaque
